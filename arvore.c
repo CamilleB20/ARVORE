@@ -39,6 +39,7 @@ Arvore* criarArvore (ArvoreNo* r){
   return a;
 }
 
+
 //função que insere os elementos na árvore
 void inserir(Arvore* arvore, char elemento, char lado) {
   if (arvore == NULL) {
@@ -79,10 +80,56 @@ void inserir(Arvore* arvore, char elemento, char lado) {
 }
 
 
+//função que ajuda a remover um nó
+static ArvoreNo* removerNo(ArvoreNo* r, char c) {
+  if (r == NULL) {
+    return r; //se não encontrar o nó
+  }
+  //Primeiro caso possível: Se quiser remover o nó atual
+  if (c == r->info) {
+    //quantNóFilhos == 0
+    if (r->esquerda == NULL && r->direita == NULL) { 
+      free(r);
+      return NULL;
+    }
+    //quantNóFilhos == 1
+    if (r->esquerda == NULL) {
+      ArvoreNo* temp = r->direita;
+      free(r);
+      return temp;
+    }
+    if (r->direita == NULL) {
+      ArvoreNo* temp = r->esquerda;
+      free(r);
+      return temp;
+    }
+    //quantNóFilhos == 2
+    ArvoreNo* sucessor = r->direita; //encontra o sucessor (menor)
+    while (sucessor->esquerda != NULL) {
+      sucessor = sucessor->esquerda;
+    }
+    r->info = sucessor->info; //troca o que vamos remover com o sucessor
+    r->direita = removerNo(r->direita, sucessor->info); //remove o novo sucessor
+  }
+
+  //Segundo caso possível: Qual direção o nó que será removido está
+  if (c < r->info) {
+    r->esquerda = removerNo(r->esquerda, c);
+  } else {
+    r->direita = removerNo(r->direita, c);
+  }
+  return r;
+}
+//função para remover um nó escolhido
+ArvoreNo* remover(Arvore* a, char c) {
+  return removerNo(a->raiz, c);
+}
+
+
 //função auxiliar que exibe os elementos da árvore
 static void imprime (ArvoreNo* r){
     if (r != NULL){
-        printf("% c ", r->info);
+        printf("%c ", r->info);
         imprime(r->esquerda);
         imprime(r->direita);
     }
@@ -92,6 +139,7 @@ static void imprime (ArvoreNo* r){
 void imprimeArvore (Arvore* a){
     imprime(a->raiz);
 }
+
 
 //função auxiliar que libera a memória
 static void liberarMemoria (ArvoreNo* r){
@@ -108,6 +156,7 @@ void liberarRaiz (Arvore* a){
   free(a);
 }
 
+
 //função auxiliar que verifica se o elemento está na árvore
 static int pertence (ArvoreNo* r, char c){
   if (r == NULL){
@@ -121,6 +170,7 @@ static int pertence (ArvoreNo* r, char c){
 int pertenceRaiz (Arvore* a, char c){
   return pertence(a->raiz, c);
 }
+
 
 //função auxiliar que busca e apresenta o elemento
 static ArvoreNo* buscaElemento (ArvoreNo* r, char c){
@@ -142,6 +192,71 @@ static ArvoreNo* buscaElemento (ArvoreNo* r, char c){
 ArvoreNo* buscaRaiz (Arvore* a, char c){
   return buscaElemento(a->raiz, c);
 }
+
+
+//função que ajuda a contar os nós
+static int contarNosUm(ArvoreNo* r) {
+  if (r == NULL) {
+    return 0;
+  } else {
+    return 1 + contarNosUm(r->esquerda) + contarNosUm(r->direita); //conta o nó atual e os nós das subárvores
+}
+}
+//função contador dos nós totais
+int contarNosFinal(Arvore* a) {
+  return contarNosUm(a->raiz);
+}
+
+
+//função que ajuda a contar as folhas
+static int contarFolhasUm(ArvoreNo* r) {
+  if (r == NULL) {
+    return 0;
+  }
+  if (r->esquerda == NULL && r->direita == NULL) { //identificando quem são as folhas
+    return 1;
+  }
+  return contarFolhasUm(r->esquerda) + contarFolhasUm(r->direita); //se não, elas são classificadas como subárvores
+}
+//função contador de todas as folhas
+int contarFolhasFinal(Arvore* a) {
+  return contarFolhasUm(a->raiz);
+}
+
+
+//função que ajuda a acharmos a altura da árvore
+static int calAlturaUm(ArvoreNo* r) {
+  if (r == NULL) {
+    return -1;
+  }
+  int esq = calAlturaUm(r->esquerda);
+  int dir = calAlturaUm(r->direita); //calculamos a altura das subárvores esquerda e direita
+  return (esq > dir ? esq : dir) + 1;
+}
+//função que calcula a altura da árvore
+int calAlturaFinal(Arvore* a) {
+  return calAlturaUm(a->raiz);
+}
+
+
+//função que ajuda a verificar se a árvore é própria
+static int propOuImUm(ArvoreNo* r) {
+  if (r == NULL) {
+    return 1; //se nó == NULL, então própria
+  }
+  if (r->esquerda == NULL && r->direita == NULL) { // se nó == folha, então própria
+    return 1;
+  }
+  if (r->esquerda == NULL || r->direita == NULL) { // se quantFilhoNo == 1, então imprópria
+    return 0;
+  }
+  return propOuImUm(r->esquerda) && propOuImUm(r->direita); //verificando subárvores
+}
+//função verica se é própria ou não
+int propOuImFinal(Arvore* a) {
+  return propOuImUm(a->raiz);
+}
+
 
 void menu() {
   int opcao;
@@ -186,40 +301,53 @@ void menu() {
         imprimeArvore(arvore);
         printf("\n");
         break;
+      
+      case 3:
+        printf("Digite o elemento que gostaria de remover: ");
+        scanf(" %c", &elemento);
+        arvore->raiz = remover(arvore, elemento);
+        printf("Árvore atual, sem o elemento removido: ");
+        imprimeArvore(arvore);
+        printf("\n");
+        break;
+  
+      case 4:
+        printf("Árvore (Pré-ordem): ");
+        imprimeArvore(arvore);
+        printf("\n");
+        break;
+        
+      case 5:
+        printf("Total de nós: ");
+        contarNosFinal(arvore);
+        printf("\n");
+        break;
+        
+      case 6:
+        printf("Total de folhas: ");
+        contarFolhasFinal(arvore);
+        printf("\n");
+        break;
+          
+      case 7:
+        printf("Altura da árvore: ");
+        calAlturaFinal(arvore);
+        printf("\n");
+        break;
+        
+      case 8:
+        if (propOuImFinal(arvore)) {
+          printf("A árvore é própria\n");
+        } else {
+          printf("A árvore é imprópria\n");
+        }
+        break;
 
-          // case 3:
-          //     printf("Digite o elemento a ser removido: ");
-          //     scanf(" %c", &elemento);
-          //     arvore->raiz = remover(arvore->raiz, elemento);
-          //     break;
-
-        case 4:
-          printf("Árvore (Pré-ordem): ");
-          imprimeArvore(arvore);
-          printf("\n");
-          break;
-
-          // case 5:
-          //     printf("Total de nós: %d\n", contarNos(arvore->raiz));
-          //     break;
-
-          // case 6:
-          //     printf("Total de folhas: %d\n", contarFolhas(arvore->raiz));
-          //     break;
-
-          // case 7:
-          //     printf("Altura da árvore: %d\n", calcularAltura(arvore->raiz));
-          //     break;
-
-          // case 8:
-          //     printf("A árvore é %s\n", ehPropria(arvore->raiz) ? "própria" : "imprópria");
-          //     break;
-
-        case 9:
-          printf("Saindo e liberando espaço na memória...\n");
-          //liberarMemoria(arvore->raiz);
-          liberarRaiz(arvore);
-          break;
+      case 9:
+        printf("Saindo e liberando espaço na memória...\n");
+        //liberarMemoria(arvore->raiz);
+        liberarRaiz(arvore);
+        break;
     }
   } while (opcao != 9);
 }
